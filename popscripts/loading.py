@@ -117,4 +117,4 @@ def mask_basin(grid, basin):
     select = []
     for bnum in basin_codes[basin]:
         select.append((mask == bnum))
-    return np.any(select)
+    return xr.DataArray(np.any(select, axis=0), coords=mask.coords)
