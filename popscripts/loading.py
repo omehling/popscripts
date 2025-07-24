@@ -58,6 +58,10 @@ def load_pop(exp, res, year, month, dask=False):
 def ym_string(year, month):
     return f"{year:04d}-{month:02d}"
 
+def add_time_dim(ds, year, month):
+    time_ax = xr.date_range(ym_string(year, month), periods=1, freq="MS", calendar="365_day")
+    return ds.expand_dims({"time": time_ax})
+
 def load_grid(res):
     """
     Load POP grid file
