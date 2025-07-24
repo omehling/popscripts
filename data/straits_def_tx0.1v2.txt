@@ -1,0 +1,24 @@
+2929 2947 1979 1979    1   42 zonal  Bering Strait
+ 583  656 2010 2010    1   42 zonal  Davis Strait
+ 551  591 2226 2226    1   42 zonal  Lancaster Sound
+ 606  621 2249 2249    1   42 zonal  Jones Sound
+ 687  687 2248 2258    1   42 merid  Nares Strait
+ 522  522 1920 1951    1   42 merid  Hudson Bay
+ 867  867 1941 2003    1   42 merid  Denmark Strait
+ 911 1107 1907 1907    1   42 zonal  Iceland-Norway
+ 921 1022 2215 2215    1   42 zonal  Fram Strait
+1097 1388 2211 2211    1   42 zonal  Barents Sea Opening
+1090 1110 1741 1741    1   42 zonal  English Channel
+1042 1042 1550 1560    1   42 merid  Gibraltar
+ 300 1107 1669 1669    1   42 zonal  Atlantic 45N
+ 270 1050 1456 1456    1   42 zonal  Atlantic 26N
+ 500 1299  810  810    1   42 zonal  Atlantic 34S
+1300 3600  810  810    1   42 zonal  Indo-Pacific 34S-1
+   1  450  810  810    1   42 zonal  Indo-Pacific 34S-2
+ 565  698 1789 1789    1   42 zonal  OSNAP-W-1
+ 698  698 1789 1872    1   42 merid  OSNAP-W-2
+ 698  800 1872 1872    1   42 zonal  OSNAP-E-1
+ 800  800 1836 1872    1   42 merid  OSNAP-E-2
+ 800 1053 1836 1836    1   42 zonal  OSNAP-E-3
+2241 2241  958 1096    1   42 merid  Indonesian Throughflow
+1380 1380  810  833    1   42 merid  Agulhas

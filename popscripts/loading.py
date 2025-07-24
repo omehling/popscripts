@@ -127,3 +127,38 @@ def mask_basin(grid, basin):
     for bnum in basin_codes[basin]:
         select.append((mask == bnum))
     return xr.DataArray(np.any(select, axis=0), coords=mask.coords)
+
+def load_straits(res, subset=None):
+    """
+    Import list of straits from `straits_def_<RES>.txt` in the directory `grid_path`.
+    See example file in `data/` for the expected file format
+
+    Args:
+        res: Model resolution (gx1v6 or tx0.1v2)
+        subset: subset of straits (default: None = include all straits)
+
+    Returns:
+        pandas.DataFrame
+    """
+    check_res(res)
+
+    strait_list_import = pd.read_csv(grid_path+f"/straits_def_{res}.txt", header=None)
+    strait_list = pd.DataFrame(index=range(len(strait_list_import)), columns=[
+        "i_start", "i_stop", "j_start", "j_stop",
+        "nr", "levels", "orientation", "strait"
+    ])
+
+    for i in range(len(strait_list_import)):
+        list_cond = [item for item in strait_list_import[0][i].split(" ") if item != '']
+        strait_list.iloc[i,:7] = list_cond[:7]
+        strait_list.iloc[i,-1] = " ".join(list_cond[7:])
+
+    strait_list.iloc[:,:6] = strait_list.iloc[:,:6].astype("int")
+
+    if subset is None:
+        return strait_list
+    else:
+        return strait_list[
+            (strait_list.loc[:,"strait"].isin(subset)) |
+            (strait_list.loc[:,"strait"].apply(lambda x: x[:-2]).isin(subset)) # with -X suffix
+        ]
