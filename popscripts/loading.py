@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import xarray as xr
 import numpy as np
+import pandas as pd
+
+# GLOBAL CONFIG: data paths
+grid_path = "/home/omehling/models/pop/grid"
+exp_base_path = "/projects/0/prjs1105/oliver/pop/output"
 
 def check_res(res):
     if res not in ('gx1v6', 'tx0.1v2'):
@@ -25,7 +30,7 @@ def pop_path(exp, res="gx1v6"):
         elif res == "tx0.1v2":
             return "/projects/0/prace_imau/prace_2013081679/pop/tx0.1v2/pop.B2000.tx0.1v2.qe_hosing.001"
     else:
-        return f"/projects/0/prjs1105/oliver/pop/output/{res}/{exp}"
+        return f"{exp_base_path}/{res}/{exp}"
 
 def load_pop(exp, res, year, month, dask=False):
     """
@@ -68,9 +73,9 @@ def load_grid(res):
     """
     check_res(res)
     if res == "gx1v6":
-        return xr.load_dataset("/home/omehling/models/pop/grid/grid_gx1v6.nc").rename({"nlat": "j", "nlon": "i"})
+        return xr.load_dataset(grid_path+"/grid_gx1v6.nc").rename({"nlat": "j", "nlon": "i"})
     else:
-        return xr.load_dataset("/home/omehling/models/pop/grid/grid_tx0.1v2.nc").rename({"nlat": "j", "nlon": "i"})
+        return xr.load_dataset(grid_path+"/grid_tx0.1v2.nc").rename({"nlat": "j", "nlon": "i"})
 
 def load_z(res):
     """
@@ -82,11 +87,11 @@ def load_z(res):
     """
     check_res(res)
     if res == "gx1v6":
-        depth_file 	= np.loadtxt("/home/omehling/models/pop/grid/in_depths.40.dat")
+        depth_file 	= np.loadtxt(grid_path+"/in_depths.40.dat")
         depth		= depth_file[:, 1]
         layer		= depth_file[:, 0] / 100.0
     else:
-        depth_file 	= np.loadtxt("/home/omehling/models/pop/grid/in_depths.42.dat")
+        depth_file 	= np.loadtxt(grid_path+"/in_depths.42.dat")
         layer		= depth_file[:, 0] / 100.0
         depth = np.zeros(len(layer))
         for k in range(len(layer)):
