@@ -7,7 +7,7 @@ from numba import njit
 from .loading import mask_basin
 
 @njit
-def mocsig_j(dens, vel, dxu, dz, sigmas, mask=None):
+def mocsig_j(dens, vel, dxu, dzu, sigmas, mask=None):
     """
     Fast computation of density-space overturning streamfunction using numba.
     
@@ -15,7 +15,7 @@ def mocsig_j(dens, vel, dxu, dz, sigmas, mask=None):
         dens (k,j,i): Potential density in kg/m^3 - 1000
         vel (k,j,i): Northward velocities in cm/s (native POP units)
         dxu (j,i): Width of northern cell edges in cm (native POP units)
-        dz (k): Layer depths in m
+        dzu (k,j,i): Layer depths in m
         sigmas (sigma): List, range or numpy array of potential densities for the streamfunction
         mask (j,i): =1 over the basin and =0 elsewhere. (default: None, i.e., calculation will be global)
     NB! All inputs must be provided as numpy arrays with the shapes specified above. No time dimension is allowed.
@@ -34,7 +34,7 @@ def mocsig_j(dens, vel, dxu, dz, sigmas, mask=None):
         for k in range(ktot):
             for i in range(itot):
                 if mask_basin[j,i]>0.:
-                    v_transp = vel[k,j,i]*1e-2*dxu[j,i]*1e-2*dz[k] # v*dx*dz (m^3/s)
+                    v_transp = vel[k,j,i]*1e-2*dxu[j,i]*1e-2*dzu[k,j,i] # v*dx*dz (m^3/s)
                     if i<itot-1:
                         sigma = (dens[k,j,i]+dens[k,j+1,i]+dens[k,j,i+1]+dens[k,j+1,i+1])/4
                     else:
@@ -51,7 +51,7 @@ def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1)):
     Args:
         pop_mon: POP output fields for one month as xarray.Dataset
         grid: POP grid file as xarray.Dataset
-        dz: Layer depths in m as xarray.DataArray
+        dz: Layer depths in m as xarray.DataArray (3D for partial bottom cells, 1D without)
         p_level: Reference depth for density in m (default: 0)
         sigmas:  List, range or numpy array of potential densities for the streamfunction
     
@@ -60,12 +60,10 @@ def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1)):
     """
     # Atlantic + Arctic without Med
     mask_atl = mask_basin(grid, "atlantic_arctic").astype(np.float64).values
-    # Atlantic + Nordic Seas w/o Med and w/o Arctic
-    #mask_atl = ((grid["REGION_MASK"]==6) | (grid["REGION_MASK"]==8) | (grid["REGION_MASK"]==9)).astype(np.float64).values
     # Indo-Pacific
     mask_ip = mask_basin(grid, "indo_pacific").astype(np.float64).values
     mask_glob = mask_basin(grid, "global").astype(np.float64).values
-    
+
     if p_level == 0 and "PD" in list(pop_mon.data_vars):
         # surface density (sigma_0) in POP output
         dens_in = (pop_mon["PD"]-1)*1000
@@ -73,17 +71,25 @@ def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1)):
         # Calculate density
         t_conservative = gsw.CT_from_pt(SA=pop_mon["SALT"]*1000, pt=pop_mon["TEMP"])
         dens_in = gsw.rho(SA=pop_mon["SALT"]*1000, CT=t_conservative, p=p_level)-1000
-    
-    mocsig_glob = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dz.values, sigmas, mask=mask_glob)
-    mocsig_atl = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dz.values, sigmas, mask=mask_atl)
-    mocsig_ip = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dz.values, sigmas, mask=mask_ip)
-    
-    jtot = len(pop_mon.j)
+
+    # dz to 3D array if only 1D is provided
+    if dz.values.ndim == 1:
+        dzu = dz.values[:, np.newaxis, np.newaxis]
+        dzu = np.tile(dzu, (1, len(grid.j), len(grid.i)))
+    else:
+        dzu = dz.values
+
+    mocsig_glob = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dzu, sigmas, mask=mask_glob)
+    mocsig_atl = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dzu, sigmas, mask=mask_atl)
+    mocsig_ip = mocsig_j(dens_in.values, pop_mon["VVEL"].values, grid["DXU"].values, dzu, sigmas, mask=mask_ip)
+
     return xr.DataArray(
         np.asarray([mocsig_glob, mocsig_atl, mocsig_ip]),
+        dims=["basin", "sigma", "j"],
         coords={
-            "basin": ["global", "atlantic_arctic", "indo_pacific"],
-            "sigma": sigmas, "j": range(jtot-1)
-        }
-    )
+            "basin": [f"mocsig{p_level/1000:.0f}_glob", f"mocsig{p_level/1000:.0f}_atl", f"mocsig{p_level/1000:.0f}_ipac"],
+            "sigma": sigmas
+        },
+        attrs={"long_name": f"Meridional overturning streamfunction referenced to {p_level} dbar", "units": "Sv"}
+    ).to_dataset(dim="basin")
 

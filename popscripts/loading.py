@@ -2,6 +2,7 @@
 import xarray as xr
 import numpy as np
 import pandas as pd
+from numba import njit
 
 # GLOBAL CONFIG: data paths
 grid_path = "/home/omehling/models/pop/grid"
@@ -96,9 +97,9 @@ def load_z(res):
         depth = np.zeros(len(layer))
         for k in range(len(layer)):
             if k==0:
-                depth[k] = depth[0]/2
+                depth[k] = layer[0]/2
             else:
-                depth[k] = np.sum(depth[:k])+depth[k]/2
+                depth[k] = np.sum(layer[:k])+layer[k]/2
 
     z = xr.DataArray(depth, dims=["k"])
     dz = xr.DataArray(layer, dims=["k"])
@@ -162,3 +163,31 @@ def load_straits(res, subset=None):
             (strait_list.loc[:,"strait"].isin(subset)) |
             (strait_list.loc[:,"strait"].apply(lambda x: x[:-2]).isin(subset)) # with -X suffix
         ]
+
+@njit
+def dzu_partial_bottom(ktot, jtot, itot, kmu, depth_u, dz):
+    """
+    Cell depths (DZU) with partial bottom cells
+
+    Args:
+        ktot, jtot, itot: Size of dimensions (k,j,i)
+        kmu (j,i): Input field KMU (index of deepest U-layer)
+        depth_u (j,i): Input field HU (depth at U-points) in cm
+        dz (k): Depth of layers in m
+    
+    Returns:
+        numpy.array DZU (in m) with dimensions (k,j,i)
+    """
+    depth_u = depth_u/100
+    zbot = np.cumsum(dz)
+    
+    cell_vol_np = np.zeros((ktot, jtot, itot))
+    for j in range(jtot):
+        for i in range(itot):
+            kmax = int(kmu[j,i])-1 # 0-indexed
+            if kmax == -1:
+                continue
+            for k in range(kmax):
+                cell_vol_np[k,j,i] = dz[k]
+            cell_vol_np[kmax,j,i] = dz[kmax]-(zbot[kmax]-depth_u[j,i])
+    return cell_vol_np
