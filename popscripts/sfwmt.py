@@ -3,7 +3,6 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import gsw_xarray as gsw
-import joblib
 
 # Constants
 rho0 = 1026 # sea water density [kg/m^3]
@@ -39,8 +38,45 @@ def swmt_inputs(pop_mon):
 
     return xr.merge([f_heat, f_fw, pd_surf, alpha_surf, f_fw_prefac])
 
+def swmt(buoyancy_flux, density, tarea, mask, sigmas):
+    swmt_calc = []
+    for i, sig in enumerate(sigmas):
+        if i==0:
+            sigm1 = sig-((sigmas[i+1]-sig)/2)
+        if i>0:
+            sigm1 = (sigmas[i-1]+sig)/2
+
+        if i==len(sigmas)-1:
+            sigp1 = sig+((sig-sigmas[i-1])/2)
+        else:
+            sigp1 = (sigmas[i+1]+sig)/2
+        dsigma = sigp1-sigm1
+
+        swmt_sig = (buoyancy_flux*tarea).where(
+            (density>1000+sigm1) & (density<=1000+sigp1) & mask
+        ).sum(["i","j"])/dsigma*1e-6 # in Sv
+        swmt_calc.append(swmt_sig)
+
+    swmt_xr = xr.concat(swmt_calc, dim="sigma")
+    swmt_xr["sigma"] = sigmas
+    swmt_xr.name = "sfwmt"
+
+    return swmt_xr
+
 def swmt_from_inputs(swmt_in, mask, sigmas):
     pass    
 
 def swmt_components_from_inputs(swmt_in, mask, sigmas):
     pass
+
+def volume_below_sigma(cell_volume, density, mask, sigmas):
+    vol_calc = []
+    for sig in sigmas:
+        vol_sig = cell_volume.where(mask & (density>(sig+1000))).sum(["k","j","i"])
+        vol_calc.append(vol_sig)
+
+    volsig = xr.concat(vol_calc, dim="sigma")
+    volsig["sigma"] = sigmas
+    volsig.name = "volume_below_sigma"
+
+    return volsig
