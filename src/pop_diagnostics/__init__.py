@@ -46,8 +46,8 @@ class POP():
         Returns the freshwater content in units of m^3.
         """
         S_anom = data.SALT.where(self.mask3D(mask))*1000 - S0
-        volumes = self.grid.TAREA/(100**2)*self.grid.dz
-        return - (S_anom*volumes).sum()/S0
+        dV = (self.grid.TAREA/(100**2)*self.grid.dz).where(self.mask3D(mask))
+        return - (S_anom*dV).sum()/S0
     
     def F_surf(self, data, mask):
         """
