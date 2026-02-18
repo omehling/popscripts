@@ -33,7 +33,7 @@ def pop_path(exp, res="gx1v6"):
     else:
         return f"{exp_base_path}/{res}/{exp}"
 
-def load_pop(exp, res, year, month, dask=False):
+def load_pop(exp, res, year, month, dask=False, file_ext=None):
     """
     Load monthly POP output
 
@@ -48,7 +48,8 @@ def load_pop(exp, res, year, month, dask=False):
         xarray.Dataset
     """
     inpath = pop_path(exp, res)+"/tavg"
-    file_ext = "t.x1_SAMOC_flux" if res=="gx1v6" else "t.t0.1_42l_nccs01"
+    if file_ext is None:
+    	file_ext = "t.x1_SAMOC_flux" if res=="gx1v6" else "t.t0.1_42l_nccs01"
 
     # File names are offset by one month
     if month == 12:
@@ -57,9 +58,13 @@ def load_pop(exp, res, year, month, dask=False):
         file_path = f"{inpath}/{file_ext}.{year:04d}{(month+1):02d}.nc"
     
     if dask:
-        return xr.open_dataset(file_path, chunks={"k": 1})
+        f = xr.open_dataset(file_path, chunks={"k": 1})
     else:
-        return xr.open_dataset(file_path)
+        f = xr.open_dataset(file_path)
+    if "nlat" in f.dims:
+        return f.rename({"nlat": "j", "nlon": "i"})
+    else:
+        return f
 
 def ym_string(year, month):
     return f"{year:04d}-{month:02d}"
