@@ -49,7 +49,7 @@ def load_pop(exp, res, year, month, dask=False, file_ext=None):
     """
     inpath = pop_path(exp, res)+"/tavg"
     if file_ext is None:
-    	file_ext = "t.x1_SAMOC_flux" if res=="gx1v6" else "t.t0.1_42l_nccs01"
+        file_ext = "t.x1_SAMOC_flux" if res=="gx1v6" else "t.t0.1_42l_nccs01"
 
     # File names are offset by one month
     if month == 12:
