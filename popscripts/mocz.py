@@ -31,7 +31,7 @@ def mocz_j(vel, dxu, dz, mask=None, remove_mean=False):
 
     return moc
 
-def mocz_xr(pop_mon, grid, dz, remove_mean=False):
+def mocz_xr(pop_mon, grid, dz, remove_mean=False, regions=None):
     """
     Computation of the depth-space overturning streamfunction for multiple basins.
 
@@ -39,14 +39,16 @@ def mocz_xr(pop_mon, grid, dz, remove_mean=False):
         pop_mon: POP output fields for one month as xarray.Dataset
         grid: POP grid file as xarray.Dataset
         dz: Layer depths in m as xarray.DataArray
+        remove_mean: Remove section mean velocity before calculating MOC
+        regions: Provide a separate region file (if None, grid["REGION_MASK"] is used)
     
     Returns:
         xarray.Dataset with dimensions (basin, lev, j)
     """
     # Atlantic + Arctic without Med
-    mask_atl = mask_basin(grid, "atlantic_arctic")
-    mask_ip = mask_basin(grid, "indo_pacific")
-    mask_glob = mask_basin(grid, "global")
+    mask_atl = mask_basin(grid, "atlantic_arctic", regions=regions)
+    mask_ip = mask_basin(grid, "indo_pacific", regions=regions)
+    mask_glob = mask_basin(grid, "global", regions=regions)
     
     moc_glob = mocz_j(pop_mon["VVEL"], grid["DXU"], dz, mask=mask_glob, remove_mean=remove_mean).expand_dims({"basin": ["global"]})
     moc_atl = mocz_j(pop_mon["VVEL"], grid["DXU"], dz, mask=mask_atl, remove_mean=remove_mean).expand_dims({"basin": ["atlantic_arctic"]})

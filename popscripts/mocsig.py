@@ -44,7 +44,7 @@ def mocsig_j(dens, vel, dxu, dzu, sigmas, mask=None):
                             mocsig[s,j] -= v_transp*1e-6 # in Sv
     return mocsig
 
-def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1)):
+def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1), regions=None):
     """
     Calculate density-space overturning streamfunction for xarray input/output. Uses `:mocsig_j`
 
@@ -54,15 +54,16 @@ def mocsig_xr(pop_mon, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1)):
         dz: Layer depths in m as xarray.DataArray (3D for partial bottom cells, 1D without)
         p_level: Reference depth for density in m (default: 0)
         sigmas:  List, range or numpy array of potential densities for the streamfunction
-    
+        regions: Provide a separate region file (if None, grid["REGION_MASK"] is used)
+
     Returns:
         xarray.Dataset with dimensions (basin, sigma, j)
     """
     # Atlantic + Arctic without Med
-    mask_atl = mask_basin(grid, "atlantic_arctic").astype(np.float64).values
+    mask_atl = mask_basin(grid, "atlantic_arctic", regions=regions).astype(np.float64).values
     # Indo-Pacific
-    mask_ip = mask_basin(grid, "indo_pacific").astype(np.float64).values
-    mask_glob = mask_basin(grid, "global").astype(np.float64).values
+    mask_ip = mask_basin(grid, "indo_pacific", regions=regions).astype(np.float64).values
+    mask_glob = mask_basin(grid, "global", regions=regions).astype(np.float64).values
 
     if p_level == 0 and "PD" in list(pop_mon.data_vars):
         # surface density (sigma_0) in POP output

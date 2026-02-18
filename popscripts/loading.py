@@ -105,10 +105,13 @@ def load_z(res):
     dz = xr.DataArray(layer, dims=["k"])
     return z, dz
 
-def mask_basin(grid, basin):
+def mask_basin(grid, basin, regions=None):
+    if regions is None:
+        regions = grid["REGION_MASK"]
+
     if basin == "global":
-        return grid["REGION_MASK"]>0
-    
+        return regions>0
+
     basin_codes = {
         "atlantic": [6,8,11], # Atlantic + Labrador Sea + Hudson Bay
         "med": [7],
@@ -122,12 +125,11 @@ def mask_basin(grid, basin):
     basins = list(basin_codes.keys())
     if basin not in basins:
         raise ValueError(f"Basin '{basin}' not supported, must be one of {basins}")
-    
-    mask = grid["REGION_MASK"]
+
     select = []
     for bnum in basin_codes[basin]:
-        select.append((mask == bnum))
-    return xr.DataArray(np.any(select, axis=0), coords=mask.coords)
+        select.append((regions == bnum))
+    return xr.DataArray(np.any(select, axis=0), coords=regions.coords)
 
 def load_straits(res, subset=None):
     """
