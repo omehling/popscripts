@@ -30,9 +30,14 @@ def get_variables(filetype):
 
 ####################### READING ########################
 
-def read_pop_binary(file, nrec_in, num_rows=384, num_cols=320, rec_length=8):
+def read_pop_binary(file, nrec_in, num_rows=384, num_cols=320, rec_length=8, rec_type="float"):
     total_elements = num_rows * num_cols
-    dtype = f'>f{rec_length}'
+    if rec_type=="float":
+        dtype = f'>f{rec_length}'
+    elif rec_type=="int":
+        dtype = f'>i{rec_length}'
+    else:
+        raise KeyError("read_pop_binary so far only supports rec_type 'float' or 'int'")
     
     with open(file, 'rb') as f:
         # Move to the desired record (Fortran uses 1-based indexing)
@@ -110,9 +115,14 @@ def parse_pop_header(file_path):
 
 ####################### WRITING ########################
 
-def write_pop_binary(field, file, nrec_out, num_rows=384, num_cols=320, rec_length=8):
+def write_pop_binary(field, file, nrec_out, num_rows=384, num_cols=320, rec_length=8, rec_type="float"):
     total_elements = num_rows * num_cols
-    dtype = f'>f{rec_length}'
+    if rec_type=="float":
+        dtype = f'>f{rec_length}'
+    elif rec_type=="int":
+        dtype = f'>i{rec_length}'
+    else:
+        raise KeyError("read_pop_binary so far only supports rec_type 'float' or 'int'")
     field = field.ravel().astype(dtype) # convert to big-endian double-precision float
 
     with open(file, 'wb') as f:
