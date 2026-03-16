@@ -45,6 +45,20 @@ def strait_transport_meridional(i_strait, j_strait_start, j_strait_stop, UVEL, D
     return transport_total*1e-12  # in Sv
 
 @njit
+def strait_transport_general(i_zonal, j_zonal, orientation_zonal,
+                             i_meridional, j_meridional, orientation_meridional,
+                             UVEL, VVEL, DXU, DYU, dz):
+    transport_total = 0.
+
+    for k in range(len(dz)):
+        for i, j, orient in zip(i_zonal, j_zonal, orientation_zonal):
+            transport_total += transport_zonal(i, j, k, VVEL, DXU, dz)*orient
+        for i, j, orient in zip(i_meridional, j_meridional, orientation_meridional):
+            transport_total += transport_meridional(i, j, k, UVEL, DYU, dz)*orient
+
+    return transport_total*1e-12  # in Sv
+
+@njit
 def density_overturning_zonal(j_strait, i_strait_start, i_strait_stop,
                               density_range, VVEL, PD, DXU, dz):
     density_overturning = np.zeros(len(density_range))
@@ -72,6 +86,29 @@ def density_overturning_meridional(i_strait, j_strait_start, j_strait_stop,
                 d+=1
     return density_overturning*1e-12*-1
 
+@njit
+def density_overturning_general(i_zonal, j_zonal, orientation_zonal,
+                                i_meridional, j_meridional, orientation_meridional,
+                                density_range, UVEL, VVEL, PD, DXU, DYU, dz):
+    density_overturning = np.zeros(len(density_range))
+
+    for k in range(len(dz)):
+        for i, j, orient in zip(i_meridional, j_meridional, orientation_meridional):
+            transport_local = transport_meridional(i, j, k, UVEL, DYU, dz)*orient
+            dens_local = tracer_meridional(i, j, k, PD)
+            d = 0
+            while d < len(density_range) and dens_local > density_range[d]:
+                density_overturning[d] += transport_local
+                d+=1
+        for i, j, orient in zip(i_zonal, j_zonal, orientation_zonal):
+            transport_local = transport_zonal(i, j, k, VVEL, DXU, dz)*orient
+            dens_local = tracer_zonal(i, j, k, PD)
+            d = 0
+            while d < len(density_range) and dens_local > density_range[d]:
+                density_overturning[d] += transport_local
+                d+=1
+
+    return density_overturning*1e-12*-1
 
 def mocsig_strait(pop_mon, res, grid, dz, p_level=0, sigmas=np.arange(23, 28.201, 0.1), straits=None):
     """
