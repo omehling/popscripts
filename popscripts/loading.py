@@ -2,6 +2,7 @@
 import xarray as xr
 import numpy as np
 import pandas as pd
+import gsw_xarray as gsw
 from numba import njit
 
 # GLOBAL CONFIG: data paths
@@ -198,3 +199,14 @@ def dzu_partial_bottom(ktot, jtot, itot, kmu, depth_u, dz):
                 cell_vol_np[k,j,i] = dz[k]
             cell_vol_np[kmax,j,i] = dz[kmax]-(zbot[kmax]-depth_u[j,i])
     return cell_vol_np
+
+def potential_density(pop_mon, grid, z, p_level=0):
+    if p_level == 0 and "PD" in list(pop_mon.data_vars):
+        # surface density (sigma_0) in POP output
+        return (pop_mon["PD"]-1)*1000
+    else:
+        # Calculate density
+        p = gsw.p_from_z(z=-z, lat=grid["TLAT"])
+        s_absolute = gsw.SA_from_SP(SP=pop_mon["SALT"]*1000, p=p, lon=grid["TLONG"], lat=grid["TLAT"])
+        t_conservative = gsw.CT_from_pt(SA=s_absolute, pt=pop_mon["TEMP"])
+        return gsw.rho(SA=s_absolute, CT=t_conservative, p=p_level)-1000
