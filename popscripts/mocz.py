@@ -31,7 +31,7 @@ def mocz_j(vel, dxu, dz, mask=None, remove_mean=False):
 
     return moc
 
-def mocz_xr(pop_mon, grid, dz, remove_mean=False, regions=None):
+def mocz_xr(pop_mon, grid, dz, velocities="eulerian", remove_mean=False, regions=None):
     """
     Computation of the depth-space overturning streamfunction for multiple basins.
 
@@ -39,7 +39,8 @@ def mocz_xr(pop_mon, grid, dz, remove_mean=False, regions=None):
         pop_mon: POP output fields for one month as xarray.Dataset
         grid: POP grid file as xarray.Dataset
         dz: Layer depths in m as xarray.DataArray
-        remove_mean: Remove section mean velocity before calculating MOC
+        velocities: "eulerian", "bolus" or "all" (= eulerian + bolus)
+        remove_mean: Remove section mean velocity before calculating MOC (not working yet)
         regions: Provide a separate region file (if None, grid["REGION_MASK"] is used)
     
     Returns:
@@ -49,10 +50,19 @@ def mocz_xr(pop_mon, grid, dz, remove_mean=False, regions=None):
     mask_atl = mask_basin(grid, "atlantic_arctic", regions=regions)
     mask_ip = mask_basin(grid, "indo_pacific", regions=regions)
     mask_glob = mask_basin(grid, "global", regions=regions)
-    
-    moc_glob = mocz_j(pop_mon["VVEL"], grid["DXU"], dz, mask=mask_glob, remove_mean=remove_mean).expand_dims({"basin": ["global"]})
-    moc_atl = mocz_j(pop_mon["VVEL"], grid["DXU"], dz, mask=mask_atl, remove_mean=remove_mean).expand_dims({"basin": ["atlantic_arctic"]})
-    moc_ip = mocz_j(pop_mon["VVEL"], grid["DXU"], dz, mask=mask_ip, remove_mean=remove_mean).expand_dims({"basin": ["indo_pacific"]})
-    
+
+    if velocities == "eulerian":
+        vvel = pop_mon["VVEL"]
+    elif velocities == "bolus":
+        vvel = pop_mon["VISOP"]
+    elif velocities == "all":
+        vvel = pop_mon["VVEL"]+pop_mon["VISOP"]
+    else:
+        raise ValueError("Velocities must be one of 'eulerian', 'bolus' or 'all'")
+
+    moc_glob = mocz_j(vvel, grid["DXU"], dz, mask=mask_glob, remove_mean=remove_mean).expand_dims({"basin": ["global"]})
+    moc_atl = mocz_j(vvel, grid["DXU"], dz, mask=mask_atl, remove_mean=remove_mean).expand_dims({"basin": ["atlantic_arctic"]})
+    moc_ip = mocz_j(vvel, grid["DXU"], dz, mask=mask_ip, remove_mean=remove_mean).expand_dims({"basin": ["indo_pacific"]})
+
     return xr.concat([moc_glob, moc_atl, moc_ip], dim="basin")
 
