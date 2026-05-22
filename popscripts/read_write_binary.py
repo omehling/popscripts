@@ -113,6 +113,34 @@ def parse_pop_header(file_path):
 
     return entries
 
+
+def read_tavg_binary(file, header_file, num_rows=384, num_cols=320, rec_length=4, nlevels=40):
+    header_x1 = parse_pop_header(header_file)
+    pvars = []
+    i = 0
+    nrecord = 1
+    for var in header_x1.keys():
+        if var == "GLOBAL":
+            continue
+        if header_x1[var]['nfield_dims'] == 2:
+            record = read_pop_binary(file, nrecord, num_rows=num_rows, num_cols=num_cols, rec_length=rec_length)
+            field_xr = xr.DataArray(record, dims=["j", "i"])
+            nrecord+=1
+        elif header_x1[var]['nfield_dims'] == 3:
+            record = []
+            for lev in range(nlevels):
+                record_lev = read_pop_binary(file, nrecord, num_rows=num_rows, num_cols=num_cols, rec_length=rec_length)
+                record.append(record_lev)
+                nrecord+=1
+            field_xr = xr.DataArray(np.stack(record), dims=["k", "j", "i"])
+        field_xr.name = var
+        field_xr.attrs = header_x1[var]
+        pvars.append(field_xr.to_dataset())
+        i+=1
+
+    return xr.merge(pvars)
+
+
 ####################### WRITING ########################
 
 def write_pop_binary(field, file, nrec_out, num_rows=384, num_cols=320, rec_length=8, rec_type="float"):

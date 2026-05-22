@@ -34,7 +34,7 @@ def pop_path(exp, res="gx1v6"):
     else:
         return f"{exp_base_path}/{res}/{exp}"
 
-def load_pop(exp, res, year, month, dask=False, file_ext=None):
+def load_pop(exp, res, year, month, dask=False, file_ext=None, binary=False):
     """
     Load monthly POP output
 
@@ -44,6 +44,8 @@ def load_pop(exp, res, year, month, dask=False, file_ext=None):
         year (int): Model year
         month (int): Model month (offset of file names will be corrected)
         dask (bool): Lazy loading using dask (recommended for high resolution) (default: False)
+        file_ext (string): File basename (default: 't.x1_SAMOC_flux' for gx1v6, 't.t0.1_42l_nccs01' for tx0.1v2)
+        binary (bool): Read from binary instead of netcdf output (default: False)
     
     Returns:
         xarray.Dataset
@@ -54,14 +56,23 @@ def load_pop(exp, res, year, month, dask=False, file_ext=None):
 
     # File names are offset by one month
     if month == 12:
-        file_path = f"{inpath}/{file_ext}.{(year+1):04d}01.nc"
+        file_path = f"{inpath}/{file_ext}.{(year+1):04d}01"
     else:
-        file_path = f"{inpath}/{file_ext}.{year:04d}{(month+1):02d}.nc"
-    
-    if dask:
-        f = xr.open_dataset(file_path, chunks={"k": 1})
+        file_path = f"{inpath}/{file_ext}.{year:04d}{(month+1):02d}"
+    if binary == False:
+        file_path = file_path+".nc"
+
+    if binary:
+        from .read_write_binary import read_tavg_binary
+        if res == "gx1v6":
+            f = read_tavg_binary(file_path, file_path+".hdr", num_rows=384, num_cols=320, rec_length=4, nlevels=40).astype("float32")
+        else:
+            f = read_tavg_binary(file_path, file_path+".hdr", num_rows=2400, num_cols=3600, rec_length=4, nlevels=42).astype("float32")
     else:
-        f = xr.open_dataset(file_path)
+        if dask:
+            f = xr.open_dataset(file_path, chunks={"k": 1})
+        else:
+            f = xr.open_dataset(file_path)
     if "nlat" in f.dims:
         return f.rename({"nlat": "j", "nlon": "i"})
     else:
