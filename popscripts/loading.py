@@ -78,6 +78,33 @@ def load_pop(exp, res, year, month, dask=False, file_ext=None, binary=False):
     else:
         return f
 
+def load_cesm(exp, year, month, dask=False):
+    """
+    Load monthly CESM output
+
+    Inputs:
+        exp: Experiment name
+        year (int): Model year
+        month (int): Model month
+        dask (bool): Lazy loading using dask (recommended for high resolution) (default: False)
+
+    Returns:
+        xarray.Dataset
+    """
+    inpath = f"/projects/0/prace_imau/prace_2013081679/cesm1_0_5/{exp}/OUTPUT/ocn/hist/monthly/"
+    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
+
+    # Use dates from file names (even though technically offset by 1 month)
+    file_path = f"{inpath}/{exp}.pop.h.{year:04d}-{month:02d}.nc"
+
+    if dask:
+        f = xr.open_dataset(file_path, decode_times=time_coder, chunks={"time": 1})
+    else:
+        f = xr.open_dataset(file_path, decode_times=time_coder)
+
+    f["SALT"] = f["SALT"]/1000 # convert to the same units as in POP-2alpha
+    return f.rename({"nlat": "j", "nlon": "i", "z_t": "k"})
+
 def ym_string(year, month):
     return f"{year:04d}-{month:02d}"
 
@@ -182,6 +209,21 @@ def load_straits(res, subset=None):
             (strait_list.loc[:,"strait"].isin(subset)) |
             (strait_list.loc[:,"strait"].apply(lambda x: x[:-2]).isin(subset)) # with -X suffix
         ]
+
+def dzu_from_dz(dz, jtot, itot):
+    """
+    Convert dz from 1D to 3D array (for strait calculations)
+
+    Args:
+        dz: 1D cell thickness
+        jtot, itot: Size of dimensions (j,i)
+
+    Returns:
+        numpy.array DZU with dimensions (k,j,i)
+    """
+    dzu = dz[:, np.newaxis, np.newaxis]
+    dzu = np.tile(dzu, (1, jtot, itot))
+    return dzu
 
 @njit
 def dzu_partial_bottom(ktot, jtot, itot, kmu, depth_u, dz):
