@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import gsw_xarray as gsw
 from numba import njit
-import os
+import os, glob
 
 # GLOBAL CONFIG: data paths
 grid_path = "/home/omehling/models/pop/grid"
@@ -93,6 +93,8 @@ def load_cesm(exp, year, month, dask=False):
         xarray.Dataset
     """
     inpath = f"/projects/0/prace_imau/prace_2013081679/cesm1_0_5/{exp}/OUTPUT/ocn/hist/monthly"
+    if len(glob.glob(inpath+"/*.nc"))==0:
+        inpath = f"/projects/0/prace_imau/prace_2013081679/cesm1_0_5/{exp}/OUTPUT/ocn/hist"
     if not os.path.isdir(inpath):
         inpath = f"/projects/0/prace_imau/prace_2013081679/cesm1_0_5/{exp}/run"
     time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
