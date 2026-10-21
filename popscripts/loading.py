@@ -8,7 +8,8 @@ import os, glob
 
 # GLOBAL CONFIG: data paths
 grid_path = "/home/omehling/models/pop/grid"
-exp_base_path = "/projects/0/prjs1105/oliver/pop/output"
+exp_base_path = "/projects/0/prace_imau/oliver/pop/output"
+analysis_base_path = "/projects/0/prace_imau/oliver/pop/processed"
 
 def check_res(res):
     if res not in ('gx1v6', 'tx0.1v2'):
@@ -34,6 +35,15 @@ def pop_path(exp, res="gx1v6"):
             return "/projects/0/prace_imau/prace_2013081679/pop/tx0.1v2/pop.B2000.tx0.1v2.qe_hosing.001"
     else:
         return f"{exp_base_path}/{res}/{exp}"
+
+def output_path(exp, res, folder_name):
+    check_res(res)
+    if exp == "default":
+        if res == "gx1v6":
+            exp = "pop.B2000.gx1v6.qe_hosing.001"
+        elif res == "tx0.1v2":
+            exp = "pop.B2000.tx0.1v2.qe_hosing.001"
+    return f"{analysis_base_path}/{res}/{exp}/{folder_name}"
 
 def load_pop(exp, res, year, month, dask=False, file_ext=None, binary=False):
     """
